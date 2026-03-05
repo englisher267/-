@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>あなたの隠れモヤモヤ度診断</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --purple: #7c3aed;
+      --blue: #2563eb;
+      --pink: #ec4899;
+      --dark: #08080f;
+      --dark2: #0f0f1a;
+      --dark3: #16162a;
+      --text: #f0f0f5;
+      --muted: rgba(240,240,245,0.45);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .screen { display: none; min-height: 100vh; }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* ===== NOISE OVERLAY ===== */
+    .noise {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+    }
+
+    /* ===== START SCREEN ===== */
+    #screen-start {
+      background: radial-gradient(ellipse at 30% 20%, #1a0a2e 0%, #08080f 60%),
+                  radial-gradient(ellipse at 70% 80%, #0a1a2e 0%, transparent 60%);
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px 56px;
+      text-align: center;
+      position: relative;
+    }
+
+    .start-inner { position: relative; z-index: 1; width: 100%; max-width: 380px; }
+
+    .badge {
+      display: inline-block;
+      border: 1px solid rgba(124,58,237,0.5);
+      background: rgba(124,58,237,0.1);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: rgba(167,139,250,0.9);
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    .start-kv {
+      width: 220px;
+      height: 220px;
+      margin: 0 auto 28px;
+      position: relative;
+    }
+
+    .start-title {
+      font-size: clamp(22px, 6vw, 30px);
+      font-weight: 900;
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+      margin-bottom: 12px;
+    }
+
+    .start-title .grad {
+      background: linear-gradient(120deg, #a78bfa 0%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .start-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 40px;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+      background: linear-gradient(120deg, var(--purple), var(--blue));
+      color: white;
+      border: none;
+      border-radius: 100px;
+      padding: 17px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 6px 28px rgba(124,58,237,0.45);
+    }
+    .btn-primary:active { transform: scale(0.97); }
+
+    .start-note {
+      margin-top: 20px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ===== QUIZ SCREEN ===== */
+    #screen-quiz {
+      background: var(--dark2);
+      padding: 0;
+      position: relative;
+    }
+
+    .quiz-header {
+      background: rgba(15,15,26,0.95);
+      backdrop-filter: blur(12px);
+      padding: 20px 24px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .quiz-step-label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .progress-bar-wrap {
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--purple), var(--blue));
+      border-radius: 100px;
+      transition: width 0.4s cubic-bezier(.4,0,.2,1);
+    }
+
+    .quiz-body {
+      flex: 1;
+      padding: 32px 24px 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .quiz-situation {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 16px 18px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .quiz-situation::before {
+      content: '📱 シーン';
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: rgba(167,139,250,0.7);
+      margin-bottom: 6px;
+    }
+
+    .quiz-q {
+      font-size: clamp(17px, 4.5vw, 20px);
+      font-weight: 700;
+      line-height: 1.55;
+      margin-bottom: 28px;
+      letter-spacing: -0.01em;
+    }
+
+    .choices { display: flex; flex-direction: column; gap: 12px; }
+
+    .choice-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 16px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.5;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .choice-btn:active, .choice-btn:hover {
+      background: rgba(124,58,237,0.15);
+      border-color: rgba(124,58,237,0.6);
+      transform: translateX(4px);
+    }
+
+    .choice-label {
+      min-width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ===== TRANSITION SCREEN ===== */
+    #screen-transition {
+      background: #000;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+    }
+
+    .transition-inner {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.6s 0.8s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dm-notification {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+    }
+
+    .dm-dot {
+      width: 10px;
+      height: 10px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .dm-text {
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .dm-name {
+      font-weight: 700;
+      color: #a78bfa;
+    }
+
+    .transition-msg {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* ===== RESULT SCREEN ===== */
+    #screen-result {
+      background: var(--dark);
+      padding: 0 0 60px;
+    }
+
+    .result-hero {
+      padding: 48px 24px 32px;
+      text-align: center;
+      position: relative;
+    }
+
+    .result-tag {
+      display: inline-block;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .result-char {
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 20px;
+    }
+
+    .result-type-name {
+      font-size: clamp(22px, 5.5vw, 28px);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+
+    .result-type-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    .result-score-bar {
+      max-width: 280px;
+      margin: 0 auto 8px;
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .result-score-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 1.2s cubic-bezier(.4,0,.2,1) 0.3s;
+    }
+
+    .result-score-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    /* Pattern cards */
+    .section-wrap { padding: 0 20px; margin-bottom: 20px; }
+
+    .card {
+      background: var(--dark3);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 22px 20px;
+    }
+
+    .card-label {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: rgba(167,139,250,0.8);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-label::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      background: linear-gradient(180deg, var(--purple), var(--blue));
+      border-radius: 2px;
+    }
+
+    .pattern-text {
+      font-size: 14px;
+      line-height: 1.85;
+      color: rgba(240,240,245,0.85);
+    }
+
+    .pattern-highlight {
+      color: #a78bfa;
+      font-weight: 600;
+    }
+
+    /* Tags */
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+    .tag {
+      background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 100px;
+      padding: 4px 12px;
+      font-size: 11px;
+      color: #c4b5fd;
+    }
+
+    /* Philosopher DM section */
+    .dm-section { padding: 0 20px; margin-bottom: 20px; }
+
+    .dm-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .dm-header-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(124,58,237,0.2);
+      border: 2px solid rgba(124,58,237,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .dm-header-info { flex: 1; }
+
+    .dm-header-title {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    .dm-header-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #a78bfa;
+    }
+
+    .dm-bubble {
+      background: rgba(22,22,42,0.9);
+      border: 1px solid rgba(124,58,237,0.25);
+      border-radius: 4px 20px 20px 20px;
+      padding: 20px;
+    }
+
+    .dm-bubble-text {
+      font-size: 13.5px;
+      line-height: 1.9;
+      color: rgba(240,240,245,0.88);
+      margin-bottom: 20px;
+    }
+
+    .prescription-wrap {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 16px;
+      position: relative;
+    }
+
+    .prescription-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: rgba(167,139,250,0.7);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .prescription-preview {
+      font-size: 13px;
+      line-height: 1.8;
+      color: rgba(240,240,245,0.8);
+      margin-bottom: 12px;
+    }
+
+    .prescription-mosaic-wrap {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .prescription-mosaic-text {
+      font-size: 13px;
+      line-height: 1.8;
+      color: rgba(240,240,245,0.7);
+      filter: blur(6px);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .mosaic-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(8,8,15,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+
+    .mosaic-tap-hint {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mosaic-icon { font-size: 22px; }
+
+    .mosaic-text {
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #1a1a2e;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 28px 28px 0 0;
+      padding: 32px 24px 48px;
+      width: 100%;
+      max-width: 480px;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(.4,0,.2,1);
+    }
+
+    .modal-overlay.show .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      margin: 0 auto 24px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+
+    .modal-panel-number {
+      background: rgba(124,58,237,0.12);
+      border: 1.5px solid rgba(124,58,237,0.35);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-panel-label {
+      font-size: 10px;
+      color: rgba(167,139,250,0.7);
+      letter-spacing: 0.15em;
+      margin-bottom: 4px;
+    }
+
+    .modal-panel-num {
+      font-size: 28px;
+      font-weight: 900;
+      color: #a78bfa;
+      letter-spacing: 0.05em;
+    }
+
+    .modal-close {
+      display: block;
+      width: 100%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 100px;
+      padding: 14px;
+      font-size: 14px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    /* CTA buttons */
+    .cta-section {
+      padding: 8px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-cta-main {
+      display: block;
+      width: 100%;
+      background: linear-gradient(120deg, var(--purple), var(--blue));
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 18px 24px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 6px 24px rgba(124,58,237,0.35);
+      transition: transform 0.15s;
+    }
+
+    .btn-cta-main:active { transform: scale(0.98); }
+
+    .btn-cta-main .btn-sub-text {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .btn-cta-sub {
+      display: block;
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 16px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.15s, background 0.2s;
+    }
+
+    .btn-cta-sub:active { transform: scale(0.98); }
+
+    .retry-section {
+      padding: 20px 20px 0;
+      text-align: center;
+    }
+
+    .btn-retry {
+      background: none;
+      border: none;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* Share strip */
+    .share-strip {
+      padding: 24px 20px 4px;
+      text-align: center;
+    }
+
+    .share-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .share-btns {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .share-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .share-btn:active { background: rgba(255,255,255,0.12); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+      margin: 8px 20px;
+    }
+
+    /* Animations */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .float-anim { animation: float 3.5s ease-in-out infinite; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-in {
+      opacity: 0;
+      animation: slideIn 0.5s ease forwards;
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.25s; }
+    .delay-3 { animation-delay: 0.4s; }
+    .delay-4 { animation-delay: 0.55s; }
+    .delay-5 { animation-delay: 0.7s; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 0; }
+
+    /* Type-specific colors */
+    .type-a .result-score-fill { background: linear-gradient(90deg, #ec4899, #f97316); }
+    .type-b .result-score-fill { background: linear-gradient(90deg, #22c55e, #14b8a6); }
+    .type-c .result-score-fill { background: linear-gradient(90deg, #3b82f6, #8b5cf6); }
+    .type-d .result-score-fill { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
+    .type-a .result-type-name { color: #f472b6; }
+    .type-b .result-type-name { color: #4ade80; }
+    .type-c .result-type-name { color: #60a5fa; }
+    .type-d .result-type-name { color: #fbbf24; }
+  </style>
+</head>
+<body>
+<div class="noise"></div>
+
+<!-- =================== START SCREEN =================== -->
+<div class="screen active" id="screen-start">
+  <div class="start-inner">
+    <div class="badge">Moya-Moya Diagnosis</div>
+
+    <div class="start-kv float-anim">
+      <!-- Title KV character (general モヤモヤ bunny) -->
+      <svg viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Glow bg -->
+        <circle cx="110" cy="110" r="90" fill="url(#startGlow)" opacity="0.15"/>
+        <defs>
+          <radialGradient id="startGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#a78bfa"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </radialGradient>
+        </defs>
+        <!-- Body -->
+        <ellipse cx="110" cy="140" rx="52" ry="44" fill="#2a2a4a"/>
+        <!-- Head -->
+        <circle cx="110" cy="98" r="46" fill="#2a2a4a"/>
+        <!-- Ears -->
+        <ellipse cx="86" cy="58" rx="13" ry="26" fill="#2a2a4a"/>
+        <ellipse cx="134" cy="58" rx="13" ry="26" fill="#2a2a4a"/>
+        <ellipse cx="86" cy="58" rx="8" ry="20" fill="#3d2060"/>
+        <ellipse cx="134" cy="58" rx="8" ry="20" fill="#3d2060"/>
+        <!-- Face -->
+        <circle cx="97" cy="96" r="7" fill="white"/>
+        <circle cx="123" cy="96" r="7" fill="white"/>
+        <circle cx="99" cy="97" r="4" fill="#1a0a2e"/>
+        <circle cx="125" cy="97" r="4" fill="#1a0a2e"/>
+        <!-- Eye shine -->
+        <circle cx="100" cy="95" r="1.5" fill="white"/>
+        <circle cx="126" cy="95" r="1.5" fill="white"/>
+        <!-- Nose -->
+        <ellipse cx="110" cy="107" rx="4" ry="3" fill="#7c3aed" opacity="0.7"/>
+        <!-- Mouth - confused wavy -->
+        <path d="M100 116 Q105 113 110 116 Q115 119 120 116" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <!-- Phone in hand -->
+        <rect x="74" y="146" width="24" height="38" rx="4" fill="#1a1a3a" stroke="#4a4a7a" stroke-width="1.5"/>
+        <rect x="77" y="150" width="18" height="26" rx="2" fill="#3d2060"/>
+        <!-- Question marks floating -->
+        <text x="148" y="88" font-size="18" fill="#a78bfa" opacity="0.7" font-weight="700">?</text>
+        <text x="62" y="80" font-size="14" fill="#60a5fa" opacity="0.5" font-weight="700">?</text>
+        <text x="155" y="120" font-size="12" fill="#a78bfa" opacity="0.4" font-weight="700">?</text>
+        <!-- Sweat drop -->
+        <path d="M130 72 Q133 66 136 72 Q136 77 133 77 Q130 77 130 72Z" fill="#60a5fa" opacity="0.6"/>
+      </svg>
+    </div>
+
+    <h1 class="start-title">
+      あなたの<br><span class="grad">隠れモヤモヤ度</span><br>診断
+    </h1>
+    <p class="start-desc">
+      日常のなんか嫌な瞬間、<br>
+      あなたのパターンを暴きます。<br>
+      <small style="font-size:11px;opacity:0.6">全6問・約2分</small>
+    </p>
+    <button class="btn-primary" id="btn-start">診断スタート →</button>
+    <p class="start-note">あなたのモヤモヤに、ベストアンサー。</p>
+  </div>
+</div>
+
+<!-- =================== QUIZ SCREEN =================== -->
+<div class="screen" id="screen-quiz">
+  <div class="quiz-header">
+    <div class="quiz-step-label" id="quiz-step-label">質問 1 / 6</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-bar" style="width:16.6%"></div>
+    </div>
+  </div>
+  <div class="quiz-body" id="quiz-body">
+    <!-- injected by JS -->
+  </div>
+</div>
+
+<!-- =================== TRANSITION SCREEN =================== -->
+<div class="screen" id="screen-transition" style="position:fixed;display:none;">
+  <div class="transition-inner">
+    <div class="dm-notification">
+      <div class="dm-dot"></div>
+      <div class="dm-text"><span class="dm-name" id="trans-philosopher-name">哲学者</span> からDMが届いています</div>
+    </div>
+    <p class="transition-msg">診断中…</p>
+  </div>
+</div>
+
+<!-- =================== RESULT SCREEN =================== -->
+<div class="screen" id="screen-result">
+  <!-- injected by JS -->
+</div>
+
+<!-- =================== MODAL =================== -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-card">
+    <div class="modal-handle"></div>
+    <div class="modal-title">続きはこちらで</div>
+    <div class="modal-desc">
+      処方箋の全文は、会場のパネルまたは<br>フルレポートで確認できます。
+    </div>
+    <div class="modal-panel-number">
+      <div class="modal-panel-label">PANEL NO.</div>
+      <div class="modal-panel-num" id="modal-panel-num">#015</div>
+    </div>
+    <button class="modal-close" id="modal-close">とじる</button>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const questions = [
+  {
+    situation: "LINEのトーク画面。既読がついてから1時間、返信がない。",
+    q: "こんなとき、あなたの心の中では……？",
+    choices: [
+      { text: "「何か失礼なこと言ったかな」と自分を振り返り、つい追いLINEしてしまう", type: "A" },
+      { text: "「怒らせてしまったかも」とずっとソワソワ。次会ったとき先に謝りそう", type: "B" },
+      { text: "「まあ忙しいんだろ」と思ってそのまま。ただ少しだけ気になる", type: "C" },
+      { text: "「普通に失礼だな」と感じる。事実として記録しておく", type: "D" }
+    ]
+  },
+  {
+    situation: "SNSに投稿した写真。思ったよりいいねが集まらなかった。",
+    q: "あなたが真っ先にすることは？",
+    choices: [
+      { text: "30分おきにいいね数を確認。消そうか迷い始める", type: "A" },
+      { text: "「やっぱり変な投稿だったかな」と反省。次は無難なものにしようと思う", type: "B" },
+      { text: "「まあそんなもんか」…なのになんかモヤモヤが残る", type: "C" },
+      { text: "アルゴリズムの問題だと原因分析を始める", type: "D" }
+    ]
+  },
+  {
+    situation: "グループLINEに自分と違う意見が流れてきた。みんな賛成している。",
+    q: "あなたはどう動く？",
+    choices: [
+      { text: "「自分の感覚がおかしいのかな」と不安になり、何も言えなくなる", type: "A" },
+      { text: "空気を読んで「そうですよね〜」とリアクションしておく", type: "B" },
+      { text: "「違うと思うけど、まあいいか」とスルー。でも心にひっかかる", type: "C" },
+      { text: "「それは違います」とはっきり返信する（空気より正確さが大事）", type: "D" }
+    ]
+  },
+  {
+    situation: "友達に「最近どう？」と軽く聞かれた。",
+    q: "あなたはどう答える？",
+    choices: [
+      { text: "「実はね…」と話し始め、ついつい悩みを詳しく話してしまう", type: "A" },
+      { text: "相手の近況を先に聞いてから「私も似たような感じかな〜」と合わせる", type: "B" },
+      { text: "「まあ色々あるけど、普通かな」と深くは言わない", type: "C" },
+      { text: "事実ベースで近況報告する。感情的な話は苦手", type: "D" }
+    ]
+  },
+  {
+    situation: "全然乗り気でない誘いが来た。でも断る理由もとくにない。",
+    q: "どうする？",
+    choices: [
+      { text: "断ると嫌われそうで行ってしまう。後で「なんで行ったんだろ」と思う", type: "A" },
+      { text: "断れなくて行く。そして全力で場の空気を盛り上げようとする", type: "B" },
+      { text: "「行けない」とはっきり断る。その後少し「冷たかったかな」と思う", type: "C" },
+      { text: "「行けない理由」を論理的に説明して断る", type: "D" }
+    ]
+  },
+  {
+    situation: "人前でちょっとしたミスをしてしまった。",
+    q: "その後、あなたは？",
+    choices: [
+      { text: "何度もその場面が頭をよぎる。みんながどう思ったか気になって仕方ない", type: "A" },
+      { text: "すぐ謝って、場の空気をどう直すかをひたすら考える", type: "B" },
+      { text: "「誰でもミスはある」と思いつつ、一人でこっそりへこんでいる", type: "C" },
+      { text: "「次から同じミスをしないための対策」をすぐに考え始める", type: "D" }
+    ]
+  }
+];
+
+const results = {
+  A: {
+    typeKey: "A",
+    cssClass: "type-a",
+    typeName: "承認泥棒（クレクレ）型",
+    typeSub: "いいね中毒、診断陽性。",
+    scoreLabel: "承認依存度",
+    score: 88,
+    philosopher: "ハンス",
+    philosopherTitle: "承認欲求の専門家",
+    philosopherEmoji: "🎭",
+    panelNo: "#015",
+    patternTitle: "あなたのモヤモヤパターン",
+    pattern: `あなたは、人の「反応」をエネルギー源にして生きています。いいねが少ないと落ち込み、既読無視に震え、相手の顔色で今日の気分が決まる。\n\n悪い人ではありません。ただ、あなたの「自分の価値を測るモノサシ」が、いつの間にか自分の外側—他人の評価—に置かれてしまっています。\n\nそのモノサシが他人の手にある限り、あなたは永遠に不安から抜け出せません。`,
+    tags: ["#既読確認癖", "#追いLINE", "#いいね数カウント", "#承認ループ"],
+    dmIntro: `ご相談拝見いたしました。\n\n診断の結果、あなたの心は現在、他人の瞳という「鏡」の中にしか存在できていないようです。SNSの通知、既読の有無、周囲の表情—あなたはそれらすべてを「自分が存在している証拠」として集め続けています。\n\n今のままだと、他人の評価が一点でも下がれば、あなたの存在そのものが揺らいでしまいます。これを哲学的な言葉では「鏡の中の亡霊（スペクトル）状態」と呼びます。`,
+    prescriptionPreview: "【解消のための処方箋】まず、SNSの通知をオフにするのは逆効果です。そうではなく、自分の価値を「他人の承認」から「自分の〇〇〇〇」へとシフトさせる必要があります——",
+    prescriptionMosaic: "具体的には、まず明日から「〇〇〇〇〇〇」を意識して過ごしてみてください。他人の反応を待つ前に、あなた自身が……（会場パネル #015 または フルレポートで全文公開中）"
+  },
+  B: {
+    typeKey: "B",
+    cssClass: "type-b",
+    typeName: "同調圧力の奴隷（イエスマン）型",
+    typeSub: "返信に30分、あなたのせいじゃない。",
+    scoreLabel: "同調依存度",
+    score: 82,
+    philosopher: "ハイデガー",
+    philosopherTitle: "実存哲学・カテゴリマスター",
+    philosopherEmoji: "🌑",
+    panelNo: "#102",
+    patternTitle: "あなたのモヤモヤパターン",
+    pattern: `あなたは「空気を読む天才」です。でも、その才能が今、あなた自身を縛っています。\n\n返信一通に30分悩む。誘いを断れない。自分の意見より「みんながどう思うか」が先に来る。それはあなたが優しいからではなく、自分が消えることを恐れているからです。\n\n「みんな」という巨大な怪物の一部になることで、あなたは安心感を得てきました。でもその代わり、「あなた自身」はどこへ行ってしまったのでしょうか。`,
+    tags: ["#断れない", "#空気読みすぎ", "#グループLINE恐怖症", "#返信30分"],
+    dmIntro: `お悩み、しかと受け止めました。\n\nあなたは今、自分という個体を捨て、巨大な「世間（みんな）」という怪物の一部になってしまっています。哲学ではこれを「ダス・マン（das Man）」状態と呼びます。\n\n返信一通に30分悩むのは、あなたが優しいからではありません。自分が消えることを恐れているからです。「みんな」がどう思うかより先に、あなた自身がどう感じるかを問う習慣を、今すぐ始める必要があります。`,
+    prescriptionPreview: "【解消のための処方箋】この「細胞状態」を抜け出すには、ハイデガー流の「死の先駆的決意」が必要です。難しい言葉に聞こえるかもしれませんが——",
+    prescriptionMosaic: "やることはシンプルです。今夜寝る前に「〇〇〇〇〇」という問いを自分に投げかけるだけで、あなたのダス・マン状態は……（会場パネル #102 または フルレポートで全文公開中）"
+  },
+  C: {
+    typeKey: "C",
+    cssClass: "type-c",
+    typeName: "孤高の迷子（アウトサイダー）型",
+    typeSub: "クールなふりして、ちゃんと傷ついてる。",
+    scoreLabel: "孤立防衛度",
+    score: 79,
+    philosopher: "ニーチェ",
+    philosopherTitle: "超人論・価値転換",
+    philosopherEmoji: "⚡",
+    panelNo: "#032",
+    patternTitle: "あなたのモヤモヤパターン",
+    pattern: `あなたは「周りとは違う」という感覚を持っています。それは本当のことかもしれません。でも今、あなたはその「違い」を盾にして、本当は求めているものから遠ざかっています。\n\n断るのは得意。でも断った後、少し寂しい。誰かに深く理解されたいくせに、理解されようとしない。\n\nその「偽りの孤高」は、あなたを自由にしているように見えて、実は透明な檻の中に閉じ込めています。`,
+    tags: ["#わかってほしい", "#でも言わない", "#クールなふり", "#孤独と孤立は違う"],
+    dmIntro: `フン、面白い相談だ。\n\n君は「周りとは違う自分」に酔いしれながら、その実、誰にも理解されない孤独に震えているな。その「偽りの孤高」は、君を自由にするどころか、透明な檻に閉じ込めている。\n\n私が言うのだから間違いない。私自身、まったく同じ罠に嵌まっていた。君に必要なのは、ただの馴れ合いではない。真に自立した人間関係だ。`,
+    prescriptionPreview: "【解消のための処方箋】君に必要なのは、ニーチェが提唱する「超人」としての、真に自立した人間関係だ。そのためには——",
+    prescriptionMosaic: "まず自分の「〇〇〇〇」を捨て、あえて「〇〇〇〇〇」という行動を取ってみるべきだ。それが君の「本当の孤高」と「ただの孤独」を……（会場パネル #032 または フルレポートで全文公開中）"
+  },
+  D: {
+    typeKey: "D",
+    cssClass: "type-d",
+    typeName: "正論の氷山（ジャスティス）型",
+    typeSub: "1ミリも間違っていない。だから誰もいない。",
+    scoreLabel: "論理武装度",
+    score: 85,
+    philosopher: "ソクラテス",
+    philosopherTitle: "問答法・無知の知",
+    philosopherEmoji: "⚖️",
+    panelNo: "#077",
+    patternTitle: "あなたのモヤモヤパターン",
+    pattern: `あなたの言っていることは、論理的には1ミリも間違っていません。それがあなたのモヤモヤの原因です。\n\n「なぜ正しいことを言っているのに、うまくいかないのか」——その答えはシンプルです。人間は論理だけでは動かないからです。\n\nあなたは「正しさ」という武器で自分を守ると同時に、大切な居場所まで破壊し続けています。氷山の一角（正論）だけを出して、水面下の感情を隠しているあなたに、今こそ必要なことがあります。`,
+    tags: ["#論理的正しさ", "#でも誰もついてこない", "#感情より事実", "#孤立系正義"],
+    dmIntro: `あなたの仰ることは、論理的には1ミリも間違っていません。\n\nしかし、だからこそ周りに誰もいなくなっているのです。あなたは「正しさ」という武器で自分を守るのと同時に、大切な居場所まで破壊しています。\n\nソクラテスの言葉を借りれば、本当に賢い人間とは「自分が知らないことを知っている人」です。あなたが「正しい」と確信しているその瞬間こそ、最も危険な瞬間なのです。`,
+    prescriptionPreview: "【解消のための処方箋】ソクラテス流の「無知の知」をインストールしましょう。あなたが「正しい」と確信しているその瞬間にこそ——",
+    prescriptionMosaic: "あえて「〇〇〇〇〇〇」と口にしてみてください。それだけで、周囲の空気は劇的に変わります。人間が動くのは……（会場パネル #077 または フルレポートで全文公開中）"
+  }
+};
+
+// Character SVGs per type
+const charSVGs = {
+  A: `<svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="80" cy="80" r="70" fill="url(#gA)" opacity="0.12"/>
+    <defs><radialGradient id="gA" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ec4899"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs>
+    <!-- Body -->
+    <ellipse cx="80" cy="116" rx="38" ry="32" fill="#3d1a2e"/>
+    <!-- Head -->
+    <circle cx="80" cy="76" r="36" fill="#3d1a2e"/>
+    <!-- Ears -->
+    <ellipse cx="60" cy="46" rx="10" ry="22" fill="#3d1a2e"/>
+    <ellipse cx="100" cy="46" rx="10" ry="22" fill="#3d1a2e"/>
+    <ellipse cx="60" cy="46" rx="6" ry="16" fill="#7d2a50"/>
+    <ellipse cx="100" cy="46" rx="6" ry="16" fill="#7d2a50"/>
+    <!-- Heart eyes -->
+    <path d="M68 72 C68 69 65 67 63 69 C61 67 58 69 58 72 C58 75 63 79 63 79 C63 79 68 75 68 72Z" fill="#ec4899"/>
+    <path d="M102 72 C102 69 99 67 97 69 C95 67 92 69 92 72 C92 75 97 79 97 79 C97 79 102 75 102 72Z" fill="#ec4899"/>
+    <!-- Nose -->
+    <ellipse cx="80" cy="83" rx="3" ry="2" fill="#ec4899" opacity="0.8"/>
+    <!-- Anxious mouth -->
+    <path d="M72 92 Q80 88 88 92" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- Phone -->
+    <rect x="56" y="110" width="20" height="32" rx="3" fill="#1a1a3a" stroke="#ec4899" stroke-width="1.5"/>
+    <rect x="59" y="114" width="14" height="20" rx="2" fill="#2d1040"/>
+    <text x="62" y="128" font-size="8" fill="#ec4899">0♥</text>
+    <!-- Sweat drops -->
+    <path d="M108 60 Q110 55 113 60 Q113 64 110 64 Q108 64 108 60Z" fill="#60a5fa" opacity="0.7"/>
+    <path d="M114 72 Q115.5 68.5 118 72 Q118 75 115.5 75 Q114 75 114 72Z" fill="#60a5fa" opacity="0.5"/>
+    <!-- Small hearts floating -->
+    <text x="116" y="52" font-size="10" fill="#ec4899" opacity="0.6">♡</text>
+    <text x="42" y="60" font-size="8" fill="#ec4899" opacity="0.4">♡</text>
+  </svg>`,
+
+  B: `<svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="80" cy="80" r="70" fill="url(#gB)" opacity="0.12"/>
+    <defs><radialGradient id="gB" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs>
+    <!-- Bird body -->
+    <ellipse cx="80" cy="112" rx="42" ry="34" fill="#1a3a2a"/>
+    <!-- Bird head (round) -->
+    <circle cx="80" cy="72" r="38" fill="#1a3a2a"/>
+    <!-- Beak -->
+    <path d="M74 79 L80 86 L86 79Z" fill="#f59e0b"/>
+    <!-- Round eyes - nervous/nodding -->
+    <circle cx="68" cy="68" r="8" fill="white"/>
+    <circle cx="92" cy="68" r="8" fill="white"/>
+    <circle cx="70" cy="69" r="5" fill="#1a3a2a"/>
+    <circle cx="94" cy="69" r="5" fill="#1a3a2a"/>
+    <circle cx="71" cy="67" r="1.5" fill="white"/>
+    <circle cx="95" cy="67" r="1.5" fill="white"/>
+    <!-- Sweat / nervous blush -->
+    <circle cx="58" cy="76" r="6" fill="#f472b6" opacity="0.25"/>
+    <circle cx="102" cy="76" r="6" fill="#f472b6" opacity="0.25"/>
+    <!-- Wings spread (agreeing pose) -->
+    <path d="M38 100 Q28 88 32 78 Q42 90 42 100Z" fill="#1a3a2a" opacity="0.8"/>
+    <path d="M122 100 Q132 88 128 78 Q118 90 118 100Z" fill="#1a3a2a" opacity="0.8"/>
+    <!-- Nodding text bubbles -->
+    <rect x="94" y="44" width="48" height="20" rx="10" fill="#16a34a" opacity="0.8"/>
+    <text x="102" y="58" font-size="9" fill="white" font-weight="700">そうそう！</text>
+    <rect x="18" y="52" width="42" height="18" rx="9" fill="#16a34a" opacity="0.6"/>
+    <text x="25" y="65" font-size="9" fill="white" font-weight="700">ですね〜</text>
+    <!-- Sweat drop -->
+    <path d="M112 54 Q114 49 117 54 Q117 58 114 58 Q112 58 112 54Z" fill="#60a5fa" opacity="0.7"/>
+  </svg>`,
+
+  C: `<svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="80" cy="80" r="70" fill="url(#gC)" opacity="0.12"/>
+    <defs><radialGradient id="gC" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs>
+    <!-- Frog body -->
+    <ellipse cx="80" cy="114" rx="44" ry="34" fill="#1a2a3a"/>
+    <!-- Frog head -->
+    <circle cx="80" cy="76" r="40" fill="#1a2a3a"/>
+    <!-- Eye bumps -->
+    <circle cx="62" cy="58" r="14" fill="#1e3a4a"/>
+    <circle cx="98" cy="58" r="14" fill="#1e3a4a"/>
+    <!-- Eyes with cool glasses -->
+    <circle cx="62" cy="58" r="10" fill="white"/>
+    <circle cx="98" cy="58" r="10" fill="white"/>
+    <!-- Sunglasses -->
+    <rect x="50" y="52" width="24" height="14" rx="7" fill="#0f172a" opacity="0.9"/>
+    <rect x="86" y="52" width="24" height="14" rx="7" fill="#0f172a" opacity="0.9"/>
+    <line x1="74" y1="59" x2="86" y2="59" stroke="#0f172a" stroke-width="3"/>
+    <!-- Lens shine -->
+    <circle cx="56" cy="56" r="2" fill="rgba(96,165,250,0.6)"/>
+    <circle cx="92" cy="56" r="2" fill="rgba(96,165,250,0.6)"/>
+    <!-- Cool smirk -->
+    <path d="M70 84 Q80 90 90 84" stroke="rgba(255,255,255,0.4)" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- Arms crossed -->
+    <path d="M36 108 Q48 96 60 104 Q54 112 42 116Z" fill="#1a2a3a"/>
+    <path d="M124 108 Q112 96 100 104 Q106 112 118 116Z" fill="#1a2a3a"/>
+    <!-- Hidden tear (secretly sad) - tiny, subtle -->
+    <path d="M58 68 Q59 66 60 68 Q60 70 59 70 Q58 70 58 68Z" fill="#60a5fa" opacity="0.5"/>
+    <!-- Stars/sparks for outsider cool factor -->
+    <text x="120" y="46" font-size="10" fill="#60a5fa" opacity="0.5">✦</text>
+    <text x="28" y="48" font-size="8" fill="#3b82f6" opacity="0.4">✦</text>
+    <text x="124" y="68" font-size="7" fill="#60a5fa" opacity="0.35">✦</text>
+  </svg>`,
+
+  D: `<svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="80" cy="80" r="70" fill="url(#gD)" opacity="0.12"/>
+    <defs><radialGradient id="gD" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs>
+    <!-- Robe body -->
+    <path d="M36 160 L44 112 L116 112 L124 160Z" fill="#2a1a0a"/>
+    <ellipse cx="80" cy="114" rx="38" ry="8" fill="#2a1a0a"/>
+    <!-- Head -->
+    <circle cx="80" cy="74" r="36" fill="#2a1a0a"/>
+    <!-- Judge wig -->
+    <ellipse cx="80" cy="52" rx="42" ry="18" fill="#f0e6d0"/>
+    <ellipse cx="80" cy="46" rx="38" ry="14" fill="#e8d8c0"/>
+    <!-- Wig curls -->
+    <circle cx="54" cy="60" r="8" fill="#f0e6d0"/>
+    <circle cx="66" cy="62" r="8" fill="#e8d8c0"/>
+    <circle cx="80" cy="63" r="8" fill="#f0e6d0"/>
+    <circle cx="94" cy="62" r="8" fill="#e8d8c0"/>
+    <circle cx="106" cy="60" r="8" fill="#f0e6d0"/>
+    <!-- Stern eyes -->
+    <circle cx="68" cy="74" r="7" fill="white"/>
+    <circle cx="92" cy="74" r="7" fill="white"/>
+    <circle cx="70" cy="75" r="4.5" fill="#1a0a00"/>
+    <circle cx="94" cy="75" r="4.5" fill="#1a0a00"/>
+    <circle cx="71" cy="73" r="1.5" fill="white"/>
+    <circle cx="95" cy="73" r="1.5" fill="white"/>
+    <!-- Stern eyebrows -->
+    <path d="M61 66 Q68 63 75 66" stroke="#2a1a0a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M85 66 Q92 63 99 66" stroke="#2a1a0a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Thin line mouth (serious) -->
+    <line x1="72" y1="87" x2="88" y2="87" stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round"/>
+    <!-- Gavel in hand -->
+    <rect x="100" y="106" width="28" height="8" rx="3" fill="#92400e" transform="rotate(-30 100 106)"/>
+    <rect x="118" y="94" width="10" height="18" rx="3" fill="#b45309" transform="rotate(-30 118 94)"/>
+    <!-- Scale icon subtle -->
+    <text x="24" y="96" font-size="18" fill="#f59e0b" opacity="0.3">⚖</text>
+    <!-- Correct/check marks floating -->
+    <text x="122" y="76" font-size="12" fill="#f59e0b" opacity="0.5">✓</text>
+    <text x="28" y="108" font-size="10" fill="#f59e0b" opacity="0.35">✗</text>
+  </svg>`
+};
+
+// ===== STATE =====
+let currentQ = 0;
+let scores = { A: 0, B: 0, C: 0, D: 0 };
+
+// ===== HELPERS =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+}
+
+// ===== QUIZ =====
+function renderQuestion(idx) {
+  const q = questions[idx];
+  const body = document.getElementById('quiz-body');
+  const stepLabel = document.getElementById('quiz-step-label');
+  const bar = document.getElementById('progress-bar');
+
+  stepLabel.textContent = `質問 ${idx + 1} / ${questions.length}`;
+  bar.style.width = `${((idx + 1) / questions.length) * 100}%`;
+
+  // Shuffle choices
+  const shuffled = [...q.choices].sort(() => Math.random() - 0.5);
+
+  body.innerHTML = `
+    <div class="quiz-situation slide-in delay-1">${q.situation}</div>
+    <div class="quiz-q slide-in delay-2">${q.q}</div>
+    <div class="choices slide-in delay-3">
+      ${shuffled.map((c, i) => `
+        <button class="choice-btn" data-type="${c.type}">
+          <div class="choice-label">${String.fromCharCode(65 + i)}</div>
+          <div>${c.text}</div>
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  body.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleAnswer(btn.dataset.type));
+  });
+}
+
+function handleAnswer(type) {
+  scores[type]++;
+  currentQ++;
+  if (currentQ < questions.length) {
+    renderQuestion(currentQ);
+  } else {
+    showTransition();
+  }
+}
+
+// ===== TRANSITION =====
+function getResultType() {
+  return Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function showTransition() {
+  const type = getResultType();
+  const r = results[type];
+  document.getElementById('trans-philosopher-name').textContent = r.philosopher;
+
+  const trans = document.getElementById('screen-transition');
+  trans.style.display = 'flex';
+  trans.classList.add('active');
+
+  setTimeout(() => {
+    trans.style.display = 'none';
+    trans.classList.remove('active');
+    renderResult(type);
+    showScreen('screen-result');
+  }, 3200);
+}
+
+// ===== RESULT =====
+function renderResult(type) {
+  const r = results[type];
+  const el = document.getElementById('screen-result');
+
+  el.className = `screen ${r.cssClass}`;
+
+  el.innerHTML = `
+    <div class="result-hero slide-in delay-1">
+      <div class="result-tag">診断結果</div>
+      <div class="result-char float-anim">${charSVGs[type]}</div>
+      <h2 class="result-type-name">【${r.typeName}】</h2>
+      <p class="result-type-sub">${r.typeSub}</p>
+      <div class="result-score-bar">
+        <div class="result-score-fill" id="score-fill" style="width:0%"></div>
+      </div>
+      <p class="result-score-label">${r.scoreLabel} ${r.score}%</p>
+    </div>
+
+    <div class="section-wrap slide-in delay-2">
+      <div class="card">
+        <div class="card-label">${r.patternTitle}</div>
+        <p class="pattern-text">${r.pattern.replace(/\n/g, '<br><br>')}</p>
+        <div class="tag-list">
+          ${r.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="dm-section slide-in delay-3">
+      <div class="dm-header">
+        <div class="dm-header-icon">${r.philosopherEmoji}</div>
+        <div class="dm-header-info">
+          <div class="dm-header-title">哲学者からのDM · ${r.philosopherTitle}</div>
+          <div class="dm-header-name">${r.philosopher}</div>
+        </div>
+      </div>
+      <div class="dm-bubble">
+        <div class="dm-bubble-text">${r.dmIntro.replace(/\n/g, '<br><br>')}</div>
+        <div class="prescription-wrap">
+          <div class="prescription-label">処方箋</div>
+          <p class="prescription-preview">${r.prescriptionPreview}</p>
+          <div class="prescription-mosaic-wrap">
+            <div class="prescription-mosaic-text">${r.prescriptionMosaic}</div>
+            <div class="mosaic-overlay" id="mosaic-btn">
+              <div class="mosaic-tap-hint">
+                <span class="mosaic-icon">🔒</span>
+                <span class="mosaic-text">タップして確認方法を見る</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="share-strip slide-in delay-4">
+      <div class="share-label">診断結果をシェア</div>
+      <div class="share-btns">
+        <button class="share-btn" onclick="shareResult('${type}')">𝕏 でシェア</button>
+        <button class="share-btn" onclick="copyResult('${type}')">コピー</button>
+      </div>
+    </div>
+
+    <div class="cta-section slide-in delay-5">
+      <button class="btn-cta-main" onclick="window.open('https://www.0101.co.jp/', '_blank')">
+        会場（マルイ）で答え合わせをする
+        <span class="btn-sub-text">→ なんかモヤモヤする展｜パネル ${r.panelNo}</span>
+      </button>
+      <button class="btn-cta-sub" onclick="window.open('#', '_blank')">
+        📄 今すぐフルレポートで解消する
+      </button>
+    </div>
+
+    <div class="retry-section">
+      <button class="btn-retry" id="btn-retry">もう一度診断する</button>
+    </div>
+  `;
+
+  // Panel number for modal
+  document.getElementById('modal-panel-num').textContent = r.panelNo;
+
+  // Score bar animation
+  setTimeout(() => {
+    const fill = document.getElementById('score-fill');
+    if (fill) fill.style.width = r.score + '%';
+  }, 400);
+
+  // Mosaic button
+  document.getElementById('mosaic-btn').addEventListener('click', openModal);
+
+  // Retry
+  document.getElementById('btn-retry').addEventListener('click', () => {
+    currentQ = 0;
+    scores = { A: 0, B: 0, C: 0, D: 0 };
+    renderQuestion(0);
+    showScreen('screen-quiz');
+  });
+}
+
+// ===== SHARE =====
+function shareResult(type) {
+  const r = results[type];
+  const text = `私は【${r.typeName}】でした！\nあなたの隠れモヤモヤ度診断 — そのモヤモヤに、ベストアンサー。\n#モヤモヤ診断 #なんかモヤモヤする展`;
+  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+}
+
+function copyResult(type) {
+  const r = results[type];
+  const text = `私は【${r.typeName}】でした！\n${r.typeSub}\nあなたの隠れモヤモヤ度診断`;
+  navigator.clipboard?.writeText(text).then(() => {
+    alert('コピーしました！');
+  }).catch(() => {
+    alert('コピーできませんでした。');
+  });
+}
+
+// ===== MODAL =====
+function openModal() {
+  document.getElementById('modal').classList.add('show');
+}
+
+document.getElementById('modal-close').addEventListener('click', () => {
+  document.getElementById('modal').classList.remove('show');
+});
+
+document.getElementById('modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    document.getElementById('modal').classList.remove('show');
+  }
+});
+
+// ===== INIT =====
+document.getElementById('btn-start').addEventListener('click', () => {
+  renderQuestion(0);
+  showScreen('screen-quiz');
+});
+</script>
+</body>
+</html>
