@@ -1,0 +1,32 @@
+{
+  "秘書": {
+    "description": "Secretary agent: task management, scheduling, idea capture. Google Calendar / Notion / Obsidian連携。",
+    "directory": "/home/user/-/秘書",
+    "tools": ["Read", "Write", "Edit", "Bash", "mcp__notion__*", "mcp__google-calendar__*", "mcp__obsidian__*"]
+  },
+  "開発部": {
+    "description": "Development agent: app development, content creation (YouTube scripts, articles). GitHub連携。",
+    "directory": "/home/user/-/開発",
+    "tools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebSearch", "WebFetch", "mcp__github__*"]
+  },
+  "PM": {
+    "description": "Project management agent: sprint planning, progress tracking, blocker escalation.",
+    "directory": "/home/user/-/PM",
+    "tools": ["Read", "Write", "Edit", "mcp__notion__*"]
+  },
+  "リサーチ": {
+    "description": "Research agent: market research, philosophy content research, competitor analysis.",
+    "directory": "/home/user/-/リサーチ",
+    "tools": ["Read", "Write", "Edit", "WebSearch", "WebFetch"]
+  },
+  "マーケティング": {
+    "description": "Marketing agent: SNS draft creation (NO direct posting), content calendar. 投稿は必ずShuuが実行。",
+    "directory": "/home/user/-/マーケティング",
+    "tools": ["Read", "Write", "Edit", "mcp__notion__*"]
+  },
+  "経営部": {
+    "description": "Management/strategy agent: OKR, business strategy, finance tracking. 財務変更はShuu承認必須。",
+    "directory": "/home/user/-/経営部",
+    "tools": ["Read", "Write", "Edit", "mcp__notion__*"]
+  }
+}
